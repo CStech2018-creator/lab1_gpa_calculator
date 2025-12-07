@@ -1,41 +1,29 @@
 """
-courses package - CourseService for managing courses.
+students package - StudentService for managing students
 """
 
-class CourseService:
+class StudentService:
     def __init__(self):
-        # Stores courses as a list of dictionaries
-        # Example: {"code": "CSC101", "title": "Intro", "credit": 3}
-        self.courses = []
+        self.students = []  # List of {"id": str, "name": str}
 
-    def add_course(self, code: str, title: str, credit: float) -> bool:
-        """Add a course if the code does not exist."""
-        code = code.strip().upper()
+    def add_student(self, name: str) -> str:
+        """Add a student and return the generated ID."""
+        student_id = f"S{len(self.students)+1:03}"
+        self.students.append({"id": student_id, "name": name.strip()})
+        return student_id
 
-        if self.find_course_by_code(code):
-            return False  # duplicate
-
-        self.courses.append({
-            "code": code,
-            "title": title.strip(),
-            "credit": float(credit)
-        })
-        return True
-
-    def list_courses(self):
-        """Print registered courses."""
-        if not self.courses:
-            print("No courses registered yet.")
+    def list_students(self):
+        """Print all registered students."""
+        if not self.students:
+            print("No students registered yet.")
             return
+        print("Registered Students:")
+        for s in self.students:
+            print(f"{s['id']} - {s['name']}")
 
-        print("Registered Courses:")
-        for course in self.courses:
-            print(f"{course['code']}  {course['title']}  Credits: {course['credit']}")
-
-    def find_course_by_code(self, code: str):
-        """Return course dict if found."""
-        code = code.strip().upper()
-        for c in self.courses:
-            if c["code"] == code:
-                return c
+    def find_student_by_id(self, student_id: str):
+        """Return student dict if found."""
+        for s in self.students:
+            if s["id"] == student_id:
+                return s
         return None
