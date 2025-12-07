@@ -1,59 +1,53 @@
-import json
-import os
+#THUS  ALL. ARE THE. STUDENT GPA 
+    # students/StudentService.py
 
-STUDENTS_FILE = "students.json"
+students = []  # Global list to store students
 
+def register_student():
+    try:
+        student_id = input("Enter Student ID: ").strip()
+        for s in students:
+            if s["id"] == student_id:
+                print("Student ID already exists!")
+                return
 
-def load_students():
-    """Load students from JSON file, return list."""
-    if not os.path.exists(STUDENTS_FILE):
-        return []
+        first_name = input("Enter First Name: ").strip()
+        last_name = input("Enter Last Name: ").strip()
+        department = input("Enter Department (e.g., CS, IT, SE): ").strip()
+        year = input("Enter Year (1, 2, 3, 4): ").strip()
 
-    with open(STUDENTS_FILE, "r") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return []
+        full_name = f"{first_name} {last_name}"
 
+        students.append({
+            "id": student_id,
+            "first_name": first_name,
+            "last_name": last_name,
+            "full_name": full_name,
+            "department": department,
+            "year": year
+        })
 
-def save_students(students):
-    """Save students list back to JSON file."""
-    with open(STUDENTS_FILE, "w") as f:
-        json.dump(students, f, indent=4)
+        print(f"Student {full_name} registered successfully!")
+
+    except Exception as e:
+        print(f"Error registering student: {e}")
 
 
 def list_students():
-    """Print all registered students."""
-    students = load_students()
-
     if not students:
         print("No students registered yet.")
         return
 
-    print("\n--- REGISTERED STUDENTS ---")
+    print("\nRegistered Students:")
+    print("ID\tFull Name\tDepartment\tYear")
+    print("-" * 50)
+
     for s in students:
-        print(f"ID: {s['id']} | Name: {s['name']} | Department: {s['department']}")
+        print(f"{s['id']}\t{s['full_name']}\t{s['department']}\t{s['year']}")
 
 
-def register_student():
-    """Register a new student and save."""
-    name = input("Enter student's name: ")
-    department = input("Enter department: ")
-
-    students = load_students()
-
-    if students:
-        new_id = students[-1]["id"] + 1
-    else:
-        new_id = 1
-
-    new_student = {
-        "id": new_id,
-        "name": name,
-        "department": department
-    }
-
-    students.append(new_student)
-    save_students(students)
-
-    print(f"Student '{name}' registered successfully with ID {new_id}!")
+def find_student(student_id):
+    for s in students:
+        if s["id"] == student_id:
+            return s
+    return None

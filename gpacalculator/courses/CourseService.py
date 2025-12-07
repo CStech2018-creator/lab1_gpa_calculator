@@ -1,67 +1,45 @@
-import json
-import os
+# courses/CourseService.py
 
-COURSES_FILE = "courses.json"
+courses = []
 
+def add_course():
+    try:
+        course_code = input("Enter Course Code: ").strip()
+        for c in courses:
+            if c["code"] == course_code:
+                print("Course code already exists!")
+                return
 
-def load_courses():
-    """Load courses from JSON file."""
-    if not os.path.exists(COURSES_FILE):
-        return []
+        title = input("Enter Course Title: ").strip()
+        credit = float(input("Enter Course Credit: ").strip())
 
-    with open(COURSES_FILE, "r") as f:
-        try:
-            return json.load(f)
-        except json.JSONDecodeError:
-            return []
+        courses.append({
+            "code": course_code,
+            "title": title,
+            "credit": credit
+        })
 
+        print(f"Course {title} added successfully!")
 
-def save_courses(courses):
-    """Save courses list back to JSON file."""
-    with open(COURSES_FILE, "w") as f:
-        json.dump(courses, f, indent=4)
+    except Exception as e:
+        print(f"Error adding course: {e}")
 
 
 def list_courses():
-    """Print all registered courses."""
-    courses = load_courses()
-
     if not courses:
-        print("No courses registered yet.")
+        print("No courses added yet.")
         return
 
-    print("\n--- REGISTERED COURSES ---")
+    print("\nAvailable Courses:")
+    print("Code\tTitle\tCredit")
+    print("-" * 40)
+
     for c in courses:
-        print(f"ID: {c['id']} | Code: {c['code']} | Title: {c['title']} | Units: {c['units']}")
+        print(f"{c['code']}\t{c['title']}\t{c['credit']}")
 
 
-def register_course():
-    """Register a new course and save it."""
-    code = input("Enter course code: ")
-    title = input("Enter course title: ")
-    units = input("Enter course units: ")
-
-    try:
-        units = int(units)
-    except ValueError:
-        print("Units must be a number!")
-        return
-
-    courses = load_courses()
-
-    if courses:
-        new_id = courses[-1]["id"] + 1
-    else:
-        new_id = 1
-
-    new_course = {
-        "id": new_id,
-        "code": code,
-        "title": title,
-        "units": units
-    }
-
-    courses.append(new_course)
-    save_courses(courses)
-
-    print(f"Course '{title}' registered successfully with ID {new_id}!")
+def find_course(course_code):
+    for c in courses:
+        if c["code"] == course_code:
+            return c
+    return None

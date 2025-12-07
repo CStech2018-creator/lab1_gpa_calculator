@@ -1,77 +1,67 @@
-import sys
-import os
+# gradereports/GradeReport.py
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+from students.StudentService import find_student
+from courses.CourseService import find_course
+from results.ResultService import results
 
-from results.ResultService import get_results_by_student
-from courses.CourseService import load_courses
-from students.StudentService import load_students
+grade_points = {
+    "A+": 4.0,
+    "A": 4.0,
+    "A-": 3.7,
+    "B+": 3.3,
+    "B": 3.0,
+    "B-": 2.7,
+    "C+": 2.3,
+    "C": 2.0,
+    "C-": 1.7,
+    "D": 1.0,
+    "F": 0.0
+}
+
+def calculate_gpa(student_id):
+    student_results = [r for r in results if r["student_id"] == student_id]
+
+    if not student_results:
+        print("No results found for this student.")
+        return None
+
+    total_credits = 0
+    total_points = 0
+
+    for r in student_results:
+        course = find_course(r["course_code"])
+        if not course:
+            continue
+
+        credit = course["credit"]
+        grade = r["grade"]
+
+        total_credits += credit
+        total_points += credit * grade_points[grade]
+
+    if total_credits == 0:
+        return 0
+
+    return round(total_points / total_credits, 2)
 
 
-def calculate_gpa():
-    """Generate grade report and calculate GPA for a student."""
-
-    student_id = input("Enter student ID: ")
-
-    # Load students
-    students = load_students()
-    student = next((s for s in students if str(s["id"]) == str(student_id)), None)
+def generate_report(student_id):
+    student = find_student(student_id)
 
     if not student:
         print("Student not found!")
         return
 
-    print(f"\n--- GRADE REPORT FOR {student['name'].upper()} ---")
+    print(f"\n--- Grade Report for {student['full_name']} (ID: {student['id']}) ---")
+    print("Course\tTitle\tCredit\tGrade")
+    print("-" * 40)
 
-    # Load courses and results
-    courses = load_courses()
-    results = get_results_by_student(student_id)
+    student_results = [r for r in results if r["student_id"] == student_id]
 
-    if not results:
-        print("No results found for this student.")
-        return
+    for r in student_results:
+        course = find_course(r["course_code"])
+        if course:
+            print(f"{course['code']}\t{course['title']}\t{course['credit']}\t{r['grade']}")
 
-    total_quality_points = 0
-    total_units = 0
-
-    print("\nCourse Results:")
-    print("---------------------------------------------------------")
-    print("Course Code | Course Title               | Units | Grade")
-    print("---------------------------------------------------------")
-
-    for r in results:
-        course = next((c for c in courses if str(c["id"]) == str(r["course_id"])), None)
-
-        if not course:
-            print(f"Course ID {r['course_id']} not found! Skipping...")
-            continue
-
-        grade_point = grade_to_point(r["grade"])
-        total_quality_points += grade_point * int(course["units"])
-        total_units += int(course["units"])
-
-        print(f"{course['code']:12} | {course['title'][:25]:25} | {course['units']:5} | {r['grade']}")
-
-    if total_units == 0:
-        print("\nNo valid course units found. Cannot calculate GPA.")
-        return
-
-    gpa = total_quality_points / total_units
-
-    print("---------------------------------------------------------")
-    print(f"Total Units: {total_units}")
-    print(f"GPA: {gpa:.2f}")
-    print("---------------------------------------------------------")
-
-
-def grade_to_point(grade):
-    """Convert a letter grade to GPA points."""
-    grade = grade.upper()
-    points = {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1, "F": 0}
-    return points.get(grade, 0)
-
-
-if __name__ == "main":
-    calculate_gpa()
+    gpa = calculate_gpa(student_id)
+    print(f"\nCumulative GPA: {gpa}")
