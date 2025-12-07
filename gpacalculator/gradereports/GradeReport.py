@@ -1,113 +1,77 @@
-"""
-GradeReport.py
-Converts DBU letter grades to grade points and produces GPA reports.
-"""
+import sys
+import os
 
-from typing import Dict, List, Optional
-from students.StudentService import STUDENTS, find_student_by_id
-from courses.CourseService import COURSES, find_course_by_code
-from results.ResultService import RESULTS, list_results_for_student
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-# DBU grade conversion table
-GRADE_SCALE = {
-    "A": 4.00,
-    "A-": 3.75,
-    "B+": 3.50,
-    "B": 3.00,
-    "B-": 2.75,
-    "C+": 2.50,
-    "C": 2.00,
-    "C-": 1.75,
-    "D": 1.00,
-    "F": 0.00
-}
+from results.ResultService import get_results_by_student
+from courses.CourseService import load_courses
+from students.StudentService import load_students
 
-def grade_point(letter: str) -> float:
-    """
-    Convert letter grade to DBU grade point.
-    Unknown letters map to 0.0.
-    """
-    if letter is None:
-        return 0.0
-    key = letter.strip().upper()
-    return GRADE_SCALE.get(key, 0.0)
 
-def calculate_gpa(student_id: str) -> Dict:
-    """
-    Calculate GPA for a student and return a report dict:
-    {
-        "student": {"id":..., "name":...},
-        "courses": [{"code":..., "title":..., "credit":..., "letter":..., "gp":...}, ...],
-        "total_credits": float,
-        "total_grade_points": float,
-        "gpa": float
-    }
-    """
-    student = find_student_by_id(student_id)
+def calculate_gpa():
+    """Generate grade report and calculate GPA for a student."""
+
+    student_id = input("Enter student ID: ")
+
+    # Load students
+    students = load_students()
+    student = next((s for s in students if str(s["id"]) == str(student_id)), None)
+
     if not student:
-        raise ValueError("Student not found")
+        print("Student not found!")
+        return
 
-    student_results = list_results_for_student(student_id)
-    courses_info = []
-    total_credits = 0.0
-    total_grade_points = 0.0
+    print(f"\n--- GRADE REPORT FOR {student['name'].upper()} ---")
 
-    # Build a set of course codes to avoid duplicates when student has repeated entries
-    seen_courses = set()
+    # Load courses and results
+    courses = load_courses()
+    results = get_results_by_student(student_id)
 
-    for r in student_results:
-        code = r["cid"].strip().upper()
-        # skip duplicate entries for the same course (use latest entry instead)
-        if code in seen_courses:
-            # We'll allow duplicates but treat them as separate registrations if needed.
-            pass
-        seen_courses.add(code)
+    if not results:
+        print("No results found for this student.")
+        return
 
-        course = find_course_by_code(code)
+    total_quality_points = 0
+    total_units = 0
+
+    print("\nCourse Results:")
+    print("---------------------------------------------------------")
+    print("Course Code | Course Title               | Units | Grade")
+    print("---------------------------------------------------------")
+
+    for r in results:
+        course = next((c for c in courses if str(c["id"]) == str(r["course_id"])), None)
+
         if not course:
-            # Unknown course definition: skip entry
+            print(f"Course ID {r['course_id']} not found! Skipping...")
             continue
 
-        credit = float(course["credit"])
-        gp = float(r.get("gp", grade_point(r.get("letter", ""))))
-        total_credits += credit
-        total_grade_points += gp * credit
+        grade_point = grade_to_point(r["grade"])
+        total_quality_points += grade_point * int(course["units"])
+        total_units += int(course["units"])
 
-        courses_info.append({
-            "code": code,
-            "title": course["title"],
-            "credit": credit,
-            "letter": r.get("letter", ""),
-            "gp": gp
-        })
+        print(f"{course['code']:12} | {course['title'][:25]:25} | {course['units']:5} | {r['grade']}")
 
-    gpa = 0.0
-    if total_credits > 0:
-        gpa = total_grade_points / total_credits
+    if total_units == 0:
+        print("\nNo valid course units found. Cannot calculate GPA.")
+        return
 
-    return {
-        "student": student,
-        "courses": courses_info,
-        "total_credits": total_credits,
-        "total_grade_points": total_grade_points,
-        "gpa": gpa
-    }
+    gpa = total_quality_points / total_units
 
-def format_grade_report(report: Dict) -> str:
-    """Return a nice-formatted string of the grade report."""
-    student = report["student"]
-    lines = []
-    lines.append(f"Grade Report for {student['name']} (ID: {student['id']})")
-    lines.append("-" * 50)
-    if not report["courses"]:
-        lines.append("No course results recorded.")
-    else:
-        lines.append(f"{'Code':8}{'Title':30}{'Cr':>4}{'Letter':>8}{'GP':>6}")
-        for c in report["courses"]:
-            title = (c["title"][:27] + "...") if len(c["title"]) > 30 else c["title"]
-            lines.append(f"{c['code']:8}{title:30}{c['credit']:4.1f}{c['letter']:>8}{c['gp']:6.2f}")
-        lines.append("-" * 50)
-        lines.append(f"Total Credits: {report['total_credits']:.2f}")
-        lines.append(f"Total Grade Points: {report['total_grade_points']:.2f}")
-        lines.append(f"CGPA: {report['gpa']:.3f}")
-    return "\n".join(lines)
+    print("---------------------------------------------------------")
+    print(f"Total Units: {total_units}")
+    print(f"GPA: {gpa:.2f}")
+    print("---------------------------------------------------------")
+
+
+def grade_to_point(grade):
+    """Convert a letter grade to GPA points."""
+    grade = grade.upper()
+    points = {"A": 5, "B": 4, "C": 3, "D": 2, "E": 1, "F": 0}
+    return points.get(grade, 0)
+
+
+if __name__ == "main":
+    calculate_gpa()

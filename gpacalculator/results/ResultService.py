@@ -1,53 +1,75 @@
-"""
-ResultService.py
-Manages results (student-course-grade entries).
-Validates student and course existence before adding results.
-"""
+import json
+import os
 
-from typing import List, Dict, Optional
-from students.StudentService import STUDENTS, find_student_by_id
-from courses.CourseService import COURSES, find_course_by_code
+RESULTS_FILE = "results.json"
 
-# Module-level results container
-# Each result: {"sid": str, "cid": str, "letter": str, "gp": float}
-RESULTS: List[Dict[str, object]] = []
 
-def add_result(student_id: str, course_code: str, letter_grade: str, grade_point: float, container: Optional[List[Dict]] = None) -> bool:
-    """
-    Add a result entry after validating student and course.
-    Returns True if added, False otherwise.
-    """
-    if container is None:
-        container = RESULTS
+def load_results():
+    """Load results from JSON file."""
+    if not os.path.exists(RESULTS_FILE):
+        return []
 
-    # Validate student & course
-    if not find_student_by_id(student_id, STUDENTS):
-        return False
-    if not find_course_by_code(course_code, COURSES):
-        return False
+    with open(RESULTS_FILE, "r") as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return []
 
-    # Normalize
-    entry = {
-        "sid": student_id,
-        "cid": course_code.strip().upper(),
-        "letter": letter_grade.strip().upper(),
-        "gp": float(grade_point)
-    }
-    container.append(entry)
-    return True
 
-def list_results_for_student(student_id: str, container: Optional[List[Dict]] = None) -> List[Dict]:
-    """Return list of results for a given student id."""
-    if container is None:
-        container = RESULTS
-    return [r for r in container if r["sid"] == student_id]
+def save_results(results):
+    """Save results list back to JSON file."""
+    with open(RESULTS_FILE, "w") as f:
+        json.dump(results, f, indent=4)
 
-def list_all_results(container: Optional[List[Dict]] = None):
-    """Print all results in a readable fashion."""
-    if container is None:
-        container = RESULTS
-    if not container:
-        print("No results recorded yet.")
+
+def register_result(student_id):
+    """Register a result for a student."""
+    course_id = input("Enter course ID: ")
+    score = input("Enter score (0–100): ")
+
+    try:
+        score = float(score)
+        if score < 0 or score > 100:
+            print("Score must be between 0 and 100!")
+            return
+    except ValueError:
+        print("Invalid score!")
         return
-    for r in container:
-        print(f"Student {r['sid']}\tCourse {r['cid']}\tGrade {r['letter']}\tGP: {r['gp']}")
+
+    grade = calculate_grade(score)
+
+    results = load_results()
+
+    new_result = {
+        "student_id": student_id,
+        "course_id": course_id,
+        "score": score,
+        "grade": grade
+    }
+
+    results.append(new_result)
+    save_results(results)
+
+    print(f"Result recorded: Student {student_id} | Course {course_id} | Score {score} | Grade {grade}")
+
+
+def calculate_grade(score):
+    """Convert numeric score to letter grade."""
+    if score >= 70:
+        return "A"
+    elif score >= 60:
+        return "B"
+    elif score >= 50:
+        return "C"
+    elif score >= 45:
+        return "D"
+    elif score >= 40:
+        return "E"
+    else:
+        return "F"
+
+
+def get_results_by_student(student_id):
+    """Return a list of results for the given student."""
+    results = load_results()
+    return [r for r in results if str(r["student_id"]) == str(student_id)]

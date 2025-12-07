@@ -1,49 +1,59 @@
-"""
-StudentService.py
-Provides functions to manage students.
-Demonstrates module-level global container and functions that accept
-an external container for testability.
-"""
+import json
+import os
 
-from typing import List, Dict, Optional
+STUDENTS_FILE = "students.json"
 
-# Module-level global list of students (demonstrates use of global variables)
-# Each student: {"id": str, "name": str}
-STUDENTS: List[Dict[str, str]] = []
 
-def _next_student_id() -> str:
-    """Generate next student id as a string (1-based)."""
-    return str(len(STUDENTS) + 1)
+def load_students():
+    """Load students from JSON file, return list."""
+    if not os.path.exists(STUDENTS_FILE):
+        return []
 
-def add_student(name: str, container: Optional[List[Dict[str, str]]] = None) -> str:
-    """
-    Add a new student.
-    If container is provided, use that list; otherwise use module-level STUDENTS.
-    Returns the student id.
-    """
-    if container is None:
-        container = STUDENTS
+    with open(STUDENTS_FILE, "r") as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return []
 
-    sid = str(len(container) + 1)
-    container.append({"id": sid, "name": name.strip()})
-    return sid
 
-def list_students(container: Optional[List[Dict[str, str]]] = None):
-    """Print the list of registered students."""
-    if container is None:
-        container = STUDENTS
-    if not container:
+def save_students(students):
+    """Save students list back to JSON file."""
+    with open(STUDENTS_FILE, "w") as f:
+        json.dump(students, f, indent=4)
+
+
+def list_students():
+    """Print all registered students."""
+    students = load_students()
+
+    if not students:
         print("No students registered yet.")
         return
-    print("Registered students:")
-    for s in container:
-        print(f"  ID: {s['id']}\tName: {s['name']}")
 
-def find_student_by_id(student_id: str, container: Optional[List[Dict[str, str]]] = None) -> Optional[Dict[str, str]]:
-    """Return student dict if found, else None."""
-    if container is None:
-        container = STUDENTS
-    for s in container:
-        if s["id"] == student_id:
-            return s
-    return None
+    print("\n--- REGISTERED STUDENTS ---")
+    for s in students:
+        print(f"ID: {s['id']} | Name: {s['name']} | Department: {s['department']}")
+
+
+def register_student():
+    """Register a new student and save."""
+    name = input("Enter student's name: ")
+    department = input("Enter department: ")
+
+    students = load_students()
+
+    if students:
+        new_id = students[-1]["id"] + 1
+    else:
+        new_id = 1
+
+    new_student = {
+        "id": new_id,
+        "name": name,
+        "department": department
+    }
+
+    students.append(new_student)
+    save_students(students)
+
+    print(f"Student '{name}' registered successfully with ID {new_id}!")
