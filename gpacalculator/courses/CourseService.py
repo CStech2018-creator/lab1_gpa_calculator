@@ -1,41 +1,67 @@
-"""
-courses package - CourseService for managing courses.
-"""
+import json
+import os
 
-class CourseService:
-    def init(self):
-        # Stores courses as a list of dictionaries
-        # Example: {"code": "CSC101", "title": "Intro", "credit": 3}
-        self.courses = []
+COURSES_FILE = "courses.json"
 
-    def add_course(self, code: str, title: str, credit: float) -> bool:
-        """Add a course if the code does not exist."""
-        code = code.strip().upper()
 
-        if self.find_course_by_code(code):
-            return False  # duplicate
+def load_courses():
+    """Load courses from JSON file."""
+    if not os.path.exists(COURSES_FILE):
+        return []
 
-        self.courses.append({
-            "code": code,
-            "title": title.strip(),
-            "credit": float(credit)
-        })
-        return True
+    with open(COURSES_FILE, "r") as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return []
 
-    def list_courses(self):
-        """Print registered courses."""
-        if not self.courses:
-            print("No courses registered yet.")
-            return
 
-        print("Registered Courses:")
-        for course in self.courses:
-            print(f"{course['code']}  {course['title']}  Credits: {course['credit']}")
+def save_courses(courses):
+    """Save courses list back to JSON file."""
+    with open(COURSES_FILE, "w") as f:
+        json.dump(courses, f, indent=4)
 
-    def find_course_by_code(self, code: str):
-        """Return course dict if found."""
-        code = code.strip().upper()
-        for c in self.courses:
-            if c["code"] == code:
-                return c
-        return None
+
+def list_courses():
+    """Print all registered courses."""
+    courses = load_courses()
+
+    if not courses:
+        print("No courses registered yet.")
+        return
+
+    print("\n--- REGISTERED COURSES ---")
+    for c in courses:
+        print(f"ID: {c['id']} | Code: {c['code']} | Title: {c['title']} | Units: {c['units']}")
+
+
+def register_course():
+    """Register a new course and save it."""
+    code = input("Enter course code: ")
+    title = input("Enter course title: ")
+    units = input("Enter course units: ")
+
+    try:
+        units = int(units)
+    except ValueError:
+        print("Units must be a number!")
+        return
+
+    courses = load_courses()
+
+    if courses:
+        new_id = courses[-1]["id"] + 1
+    else:
+        new_id = 1
+
+    new_course = {
+        "id": new_id,
+        "code": code,
+        "title": title,
+        "units": units
+    }
+
+    courses.append(new_course)
+    save_courses(courses)
+
+    print(f"Course '{title}' registered successfully with ID {new_id}!")
